@@ -1,11 +1,18 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity >=0.8.13;
 
-// TODO: Implement all user stories and one of the feature request
+/// @title World of Ledger
+/// @author William Veal Phan
 contract Game {
-    uint256 public x;
+    /// @notice owner of the contract
+    /// @dev owner never changes
+    address public immutable owner;
+
+    /// @notice address with admin permissions
+    address public admin;
 
     constructor() {
-        x = 4;
+        owner = msg.sender;
+        admin = msg.sender;
     }
 }

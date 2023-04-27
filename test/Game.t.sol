@@ -11,7 +11,11 @@ contract GameTest is Test {
         game = new Game();
     }
 
-    function testCompany() public {
-        assertEq(game.x(), 4);
+    function testOwner() public {
+        assertEq(address(game.owner()), address(this));
+    }
+
+    function testAdmin() public {
+        assertEq(address(game.admin()), game.owner());
     }
 }
