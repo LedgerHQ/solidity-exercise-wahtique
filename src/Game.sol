@@ -1,38 +1,16 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity >=0.8.13;
+pragma solidity ^0.8.19;
 
-/// @notice error thrown when a function is called by without the appropriate rights
-error Unauthorized();
+import "./utils/AdminRights.sol";
+import "./model/Character.sol";
+import "./model/Boss.sol";
+import "./utils/PseudoRandom.sol";
 
-/// @title Admin rights
-/// @author William Veal Phan
-/// @notice Define modifiers and functions to manage admin rights
-/// @dev Inhirit from this contract and set admin address
-contract AdminRights {
-    /// @notice address with admin permissions
-    address public admin;
-
-    modifier onlyAdmin() {
-        if (msg.sender != admin) revert Unauthorized();
-        _;
-    }
-}
-
-struct Boss {
-    uint256 hp;
-    uint256 damage;
-    uint256 reward;
-}
-
-struct Character {
-    uint256 hp;
-    uint256 damage;
-    uint256 reward;
-}
+error CharacterAlreadyInGame();
 
 /// @title World of Ledger
 /// @author William Veal Phan
-contract Game is AdminRights {
+contract Game is AdminRights, PseudoRandom {
     /// @notice owner of the contract
     /// @dev owner never changes
     address public immutable owner;
@@ -41,7 +19,19 @@ contract Game is AdminRights {
     uint256 bossId = 0;
 
     /// @notice bosses currently in the game
-    mapping(uint256 => Boss) bosses;
+    mapping(uint256 id => Boss boss) public bosses;
+
+    /// @notice base health of a character
+    uint256 public characterBaseHealth = 100;
+    /// @notice max health bonus of a character; a new character hp will be in [ base - dev, base + dev ]
+    uint256 public characterBaseHealthDeviation = 10;
+    /// @notice base damage of a character
+    uint256 public characterBaseDamage = 10;
+    /// @notice max damage bonus of a character; a new character damage will be in [ base - dev, base + dev ]
+    uint256 public characterBaseDamageDeviation = 5;
+
+    /// @notice characters currently in the game ; only one character is allowed per address
+    mapping(address user => Character character) public characters;
 
     constructor() {
         // owner is the deployer of this contract
@@ -60,5 +50,15 @@ contract Game is AdminRights {
         bossId++;
         bosses[bossId] = Boss(_hp, _damage, _reward);
         return bossId;
+    }
+
+    /// @notice Create a new semi random character; only one character per address
+    /// @return senderAddress address of the newly created character
+    function createCharacter() external returns (address) {
+        if (characters[msg.sender].hp > 0) revert CharacterAlreadyInGame();
+        uint256 hp = characterBaseHealth + random(characterBaseHealthDeviation) - random(characterBaseHealthDeviation);
+        uint256 dmg = characterBaseDamage + random(characterBaseDamageDeviation) - random(characterBaseDamageDeviation);
+        characters[msg.sender] = Character(hp, dmg, 0);
+        return msg.sender;
     }
 }
