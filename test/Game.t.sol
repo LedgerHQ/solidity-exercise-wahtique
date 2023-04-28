@@ -70,3 +70,136 @@ contract GameCharacterTest is GameTest {
         game.createCharacter();
     }
 }
+
+contract GameFightTest is GameTest {
+    function test_RevertIfNoCharacterInGame() public {
+        vm.expectRevert(NoCharacterInGame.selector);
+        game.attack();
+    }
+
+    function test_reverIfNoBossInGame() public {
+        game.createCharacter();
+        vm.expectRevert(NoBossInGame.selector);
+        game.attack();
+    }
+
+    function test_RevertIfCharacterIsDead() public {
+        // spawn Faker
+        game.createBoss(1000000, 1000000, 0);
+        // spawn a peasant
+        Character memory bob = game.createCharacter();
+        assertGt(bob.hp, 0);
+        // bob attack Faker and get killed
+        game.attack();
+        (uint256 hp,,,) = game.characters(address(this));
+        assertEq(hp, 0);
+        vm.expectRevert(CharacterCannotFight.selector);
+        game.attack();
+    }
+
+    function test_BossTakeDamages(uint256 _hp) public {
+        // make sure the boss will survive
+        vm.assume(_hp > game.characterBaseDamage() + game.characterBaseDamageDeviation());
+        // spawn Faker
+        game.createBoss(_hp, 0, 0);
+        // spawn a peasant
+        Character memory bob = game.createCharacter();
+        assertGt(bob.hp, 0);
+        // bob attack and the boss take damages
+        game.attack();
+        (uint256 hp,,,) = game.boss();
+        assertEq(hp, _hp - bob.damage);
+    }
+
+    function test_BossTakeDamages_EmitHeroicFeat(uint256 _hp) public {
+        vm.assume(_hp > 0);
+        // spawn a boss
+        game.createBoss(_hp, 0, 0);
+        // spawn a peasant
+        Character memory bob = game.createCharacter();
+        // bob attack and the boss take damages
+        vm.expectEmit();
+        emit GameEvents.HeroicFeat(address(this), 1, bob.damage);
+        game.attack();
+    }
+
+    function test_CharacterTakeDamages(uint256 _dmg) public {
+        // make sure bob survives
+        vm.assume(_dmg > 0);
+        vm.assume(_dmg < game.characterBaseHealth() - game.characterBaseHealthDeviation());
+        // spawn a boss to fight
+        game.createBoss(1000, _dmg, 0);
+        // spawn a peasant
+        Character memory bob = game.createCharacter();
+        uint256 expected = bob.hp - _dmg;
+        assertGt(expected, 0);
+        // bob attack and the boss take damages
+        game.attack();
+        (uint256 hp,,,) = game.characters(address(this));
+        assertEq(hp, expected);
+    }
+
+    function test_CharacterTakeDamages_EmitPainIndicator(uint256 _dmg) public {
+        vm.assume(_dmg < game.characterBaseHealth() + game.characterBaseHealthDeviation());
+        // spawn a boss to fight
+        game.createBoss(1000, _dmg, 0);
+        // spawn a peasant
+        game.createCharacter();
+        // bob attack and the boss take damages
+        vm.expectEmit();
+        emit GameEvents.Aaaaaaargh(1, address(this), _dmg);
+        game.attack();
+    }
+
+    function test_BossSlaying(uint256 _hp) public {
+        // make sure the boss will die
+        vm.assume(_hp < game.characterBaseDamage() - game.characterBaseDamageDeviation());
+        // spawn Faker
+        game.createBoss(_hp, 0, 0);
+        // spawn a peasant
+        game.createCharacter();
+        // bob attack and the boss is dead
+        game.attack();
+        (uint256 hp,,, BossStatus status) = game.boss();
+        assertEq(hp, 0);
+        assert(status == BossStatus.Vainquished);
+    }
+
+    function test_BossSlaying_EmitBossVainquished(uint256 _hp) public {
+        vm.assume(_hp < game.characterBaseDamage() - game.characterBaseDamageDeviation());
+        // spawn Faker
+        game.createBoss(_hp, 0, 0);
+        // spawn a peasant
+        game.createCharacter();
+        // bob attack and the boss is dead
+        vm.expectEmit();
+        emit GameEvents.BossVainquished(1);
+        game.attack();
+    }
+
+    function test_HeroFalling(uint256 _dmg) public {
+        // make sure bob will die
+        vm.assume(_dmg > game.characterBaseHealth() + game.characterBaseHealthDeviation());
+        // spawn a boss to fight
+        game.createBoss(1000, _dmg, 0);
+        // spawn a peasant
+        game.createCharacter();
+        // bob attack and dies like a noob
+        game.attack();
+        (uint256 hp,,,) = game.characters(address(this));
+        assertEq(hp, 0);
+    }
+
+    function test_HeroFalling_EmitEulogy(uint256 _dmg) public {
+        // make sure bob will die
+        vm.assume(_dmg > game.characterBaseHealth() + game.characterBaseHealthDeviation());
+        // spawn a boss to fight
+        game.createBoss(1000, _dmg, 0);
+        // spawn a peasant
+        game.createCharacter();
+        // bob attack and dies like a noob
+        vm.expectEmit();
+        emit GameEvents.AHeroHasFallen(address(this));
+        game.attack();
+    }
+}
