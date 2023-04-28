@@ -3,35 +3,44 @@ pragma solidity ^0.8.19;
 
 import "../utils/PseudoRandom.sol";
 import "../utils/Math.sol";
+import "./Errors.sol";
+
+enum CharacterStatus {
+    Unborn,
+    Alive,
+    Dead
+}
 
 struct Character {
     uint256 hp;
     uint256 damage;
     uint256 healingPower;
     uint256 xp;
+    CharacterStatus status;
 }
 
 library CharacterImpl {
     using Math for uint256;
-
-    event CharacterBirth(Character character);
 
     function takeDamages(Character memory _character, uint256 _damage)
         public
         pure
         returns (Character memory updatedCharacter)
     {
+        if (_character.status == CharacterStatus.Unborn) revert UnbornCharacter();
+        if (_character.status == CharacterStatus.Dead) revert DeadCharacter();
+        
         _character.hp = _character.hp.flooredSubstract(_damage);
+        if (_character.hp == 0) {
+            _character.status = CharacterStatus.Dead;
+        }
         updatedCharacter = _character;
     }
 
-    function canFight(Character memory character) public pure returns (bool) {
-        return !isDead(character);
-    }
-
-    function isDead(Character memory character) public pure returns (bool) {
-        return character.hp == 0;
-    }
+    // function heal(Character calldata healer, Character memory other) public pure returns (Character memory) {
+    //     other.hp += healer.healingPower;
+    //     return other;
+    // }
 }
 
 abstract contract CharacterOps is PseudoRandom {
@@ -52,6 +61,6 @@ abstract contract CharacterOps is PseudoRandom {
         uint256 hp = random(characterBaseHealth, characterBaseHealthDeviation);
         uint256 dmg = random(characterBaseDamage, characterBaseDamageDeviation);
         uint256 healingPower = random(characterBaseHealingPower, characterBaseHealingPowerDeviation);
-        return Character(hp, dmg, healingPower, 0);
+        return Character(hp, dmg, healingPower, 0, CharacterStatus.Alive);
     }
 }

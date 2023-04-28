@@ -6,7 +6,7 @@ import "../src/Game.sol";
 import "../src/model/Character.sol";
 import "../src/model/Boss.sol";
 
-contract GameTest is Test {
+abstract contract GameTest is Test {
     Game public game;
 
     function setUp() public {
@@ -60,7 +60,7 @@ contract GameCharacterTest is GameTest {
 
     function test_CreateCharacter_EmitCharacterCreated() public {
         vm.expectEmit(true, false, false, false);
-        emit GameEvents.CharacterCreated(address(this), Character(100, 10, 10, 0));
+        emit GameEvents.CharacterCreated(address(this), Character(100, 10, 10, 0, CharacterStatus.Alive));
         game.createCharacter();
     }
 
@@ -72,8 +72,8 @@ contract GameCharacterTest is GameTest {
 }
 
 contract GameFightTest is GameTest {
-    function test_RevertIfNoCharacterInGame() public {
-        vm.expectRevert(NoCharacterInGame.selector);
+    function test_RevertIfCharacterIsUnborn() public {
+        vm.expectRevert(UnbornCharacter.selector);
         game.attack();
     }
 
@@ -91,7 +91,7 @@ contract GameFightTest is GameTest {
         assertGt(bob.hp, 0);
         // bob attack Faker and get killed
         game.attack();
-        (uint256 hp,,,) = game.characters(address(this));
+        (uint256 hp,,,,) = game.characters(address(this));
         assertEq(hp, 0);
         vm.expectRevert(CharacterCannotFight.selector);
         game.attack();
@@ -135,7 +135,7 @@ contract GameFightTest is GameTest {
         assertGt(expected, 0);
         // bob attack and the boss take damages
         game.attack();
-        (uint256 hp,,,) = game.characters(address(this));
+        (uint256 hp,,,,) = game.characters(address(this));
         assertEq(hp, expected);
     }
 
@@ -186,7 +186,7 @@ contract GameFightTest is GameTest {
         game.createCharacter();
         // bob attack and dies like a noob
         game.attack();
-        (uint256 hp,,,) = game.characters(address(this));
+        (uint256 hp,,,,) = game.characters(address(this));
         assertEq(hp, 0);
     }
 

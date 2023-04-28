@@ -67,17 +67,11 @@ contract Game is AdminRights, CharacterOps {
     /// @notice current boss in the game
     Boss public boss;
 
-    /// @notice users with characters in game
-    mapping(address user => bool hasCharacter) public hasCharacterInGame;
-
     /// @notice characters currently in the game ; only one character is allowed per address
     mapping(address user => Character character) public characters;
 
     /// @notice keep track of the status of past, current and future bosses
     mapping(uint256 bossId => Boss boss) public bosses;
-
-    /// @notice keep track of the rewards a boss can give
-    mapping(uint256 bossId => uint256 reward) public bossRewards;
 
     enum RewardStatus {
         Unworthy,
@@ -95,6 +89,28 @@ contract Game is AdminRights, CharacterOps {
         admin = msg.sender;
 
         bossId = 0;
+    }
+
+    /// @dev check if the user has a character in game
+    modifier needCharacter() {
+        if (characters[msg.sender].status == CharacterStatus.Unborn) revert UnbornCharacter();
+        _;
+    }
+
+    /// @dev check if the character is alive
+    modifier aliveOnly() {
+        if (characters[msg.sender].status != CharacterStatus.Alive) revert CharacterCannotFight();
+        _;
+    }
+
+    modifier needXp() {
+        if (characters[msg.sender].xp == 0) revert NotEnoughXP();
+        _;
+    }
+
+    modifier needBoss() {
+        if (bosses[bossId].status != BossStatus.Alive) revert NoBossInGame();
+        _;
     }
 
     /// @notice create a custom boss and add it to the game; need admin rights
@@ -117,24 +133,10 @@ contract Game is AdminRights, CharacterOps {
     /// @return character a peasant with a pitch-fork
     /// @custom:emits GameEvents.CharacterCreated Welcome to the world of Ledger !
     function createCharacter() external returns (Character memory) {
-        if (hasCharacterInGame[msg.sender]) revert CharacterAlreadyInGame();
+        if (characters[msg.sender].status != CharacterStatus.Unborn) revert CharacterAlreadyInGame();
         characters[msg.sender] = genCharacter();
-        hasCharacterInGame[msg.sender] = true;
         emit GameEvents.CharacterCreated(msg.sender, characters[msg.sender]);
         return characters[msg.sender];
-    }
-
-    /// @dev check if the user has a character in game
-    modifier needCharacter() {
-        if (hasCharacterInGame[msg.sender] == false) revert NoCharacterInGame();
-        _;
-    }
-
-    /// @dev check if the character is alive and can fight
-    ///      not the same as needCharacter because a character can be dead
-    modifier needFighter() {
-        if (characters[msg.sender].canFight() == false) revert CharacterCannotFight();
-        _;
     }
 
     /// @notice CHAAAAAARGE ( only if you have character who can fight)
@@ -142,27 +144,21 @@ contract Game is AdminRights, CharacterOps {
     /// @custom:emits GameEvents.Aaaaaaargh self explanatory if you've ever been eviscerated
     /// @custom:emits GameEvents.AHeroHasFallen a moment of silence for the fallen
     /// @custom:emits GameEvents.BossVainquished VICTORY
-    function attack() external needCharacter needFighter {
-        if (boss.status == BossStatus.Unborn) {
-            revert NoBossInGame();
-        } else if (boss.status == BossStatus.Vainquished) {
-            revert UnGentlemanlyBehavior();
-        } else if (boss.status == BossStatus.Alive) {
-            if (characters[msg.sender].isDead()) revert CharacterIsDead();
-            // the user attack the boss first because fantasy has taught us
-            // a boss just wait for a player and dnever take the initiative
-            boss = boss.takeDamages(characters[msg.sender].damage);
-            emit GameEvents.HeroicFeat(msg.sender, bossId, characters[msg.sender].damage);
-            // the boss counter-attack, dead or alive
-            characters[msg.sender] = characters[msg.sender].takeDamages(boss.damage);
-            emit GameEvents.Aaaaaaargh(bossId, msg.sender, boss.damage);
-            // resolve post-attack state
-            // when attackinga heror bcomees worthy
-            rewards[msg.sender][bossId] = RewardStatus.Unclaimed;
-            // a heor's death should be honored
-            if (characters[msg.sender].isDead()) emit GameEvents.AHeroHasFallen(msg.sender);
-            // a boss' death should be celebrated and their rewards become claimable
-            if (boss.isDead()) emit GameEvents.BossVainquished(bossId);
-        }
+    function attack() external needCharacter aliveOnly needBoss {
+        if (characters[msg.sender].status == CharacterStatus.Dead) revert CharacterIsDead();
+        // the user attack the boss first because fantasy has taught us
+        // a boss just wait for a player and dnever take the initiative
+        boss = boss.takeDamages(characters[msg.sender].damage);
+        emit GameEvents.HeroicFeat(msg.sender, bossId, characters[msg.sender].damage);
+        // the boss counter-attack, dead or alive
+        characters[msg.sender] = characters[msg.sender].takeDamages(boss.damage);
+        emit GameEvents.Aaaaaaargh(bossId, msg.sender, boss.damage);
+        // resolve post-attack state
+        // when attacking a hero becomf=es worthy
+        rewards[msg.sender][bossId] = RewardStatus.Unclaimed;
+        // a hero's death should be honored
+        if (characters[msg.sender].status == CharacterStatus.Dead) emit GameEvents.AHeroHasFallen(msg.sender);
+        // a boss' death should be celebrated and their rewards become claimable
+        if (boss.isDead()) emit GameEvents.BossVainquished(bossId);
     }
 }
