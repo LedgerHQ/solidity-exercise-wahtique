@@ -50,6 +50,18 @@ library GameEvents {
     /// @dev Emit this when a player is slain by the current boss
     /// @param user address of the player who has been slain
     event AHeroHasFallen(address user);
+
+    /// @notice A character has healed another one
+    /// @dev Emit this when a player heal another player
+    /// @param healer the good guy
+    /// @param target the lucky one
+    /// @param amount blood debt
+    event PositiveKarmaAction(address healer, address target, uint256 amount);
+
+    /// @notice A dead character came back form the dead
+    /// @dev Emit this when a playe is revived
+    /// @param user address of the player who has been revived
+    event WelcomeBack(address user);
 }
 
 /// @title World of Ledger
@@ -91,28 +103,6 @@ contract Game is AdminRights, CharacterOps {
         bossId = 0;
     }
 
-    /// @dev check if the user has a character in game
-    modifier needCharacter() {
-        if (characters[msg.sender].status == CharacterStatus.Unborn) revert UnbornCharacter();
-        _;
-    }
-
-    /// @dev check if the character is alive
-    modifier aliveOnly() {
-        if (characters[msg.sender].status != CharacterStatus.Alive) revert CharacterCannotFight();
-        _;
-    }
-
-    modifier needXp() {
-        if (characters[msg.sender].xp == 0) revert NotEnoughXP();
-        _;
-    }
-
-    modifier needBoss() {
-        if (bosses[bossId].status != BossStatus.Alive) revert NoBossInGame();
-        _;
-    }
-
     /// @notice create a custom boss and add it to the game; need admin rights
     /// @dev increment bossId and add a new boss to the bosses mapping
     /// @param _hp how much they can take
@@ -144,8 +134,10 @@ contract Game is AdminRights, CharacterOps {
     /// @custom:emits GameEvents.Aaaaaaargh self explanatory if you've ever been eviscerated
     /// @custom:emits GameEvents.AHeroHasFallen a moment of silence for the fallen
     /// @custom:emits GameEvents.BossVainquished VICTORY
-    function attack() external needCharacter aliveOnly needBoss {
+    function attack() external {
+        if (characters[msg.sender].status == CharacterStatus.Unborn) revert UnbornCharacter();
         if (characters[msg.sender].status == CharacterStatus.Dead) revert CharacterIsDead();
+        if (bosses[bossId].status != BossStatus.Alive) revert NoBossInGame();
         // the user attack the boss first because fantasy has taught us
         // a boss just wait for a player and dnever take the initiative
         boss = boss.takeDamages(characters[msg.sender].damage);
@@ -160,5 +152,18 @@ contract Game is AdminRights, CharacterOps {
         if (characters[msg.sender].status == CharacterStatus.Dead) emit GameEvents.AHeroHasFallen(msg.sender);
         // a boss' death should be celebrated and their rewards become claimable
         if (boss.isDead()) emit GameEvents.BossVainquished(bossId);
+    }
+
+    /// @notice Heal another player for the player healing power.
+    ///         Only if you have a character alive AND with some xp.
+    /// @param other the one who will owe you a drink next time you go out ( ie. never )
+    function heal(address other) external {
+        if (other == msg.sender) revert CannotHealSelf();
+        if (characters[msg.sender].status == CharacterStatus.Unborn) revert UnbornCharacter();
+        if (characters[msg.sender].status == CharacterStatus.Dead) revert CharacterIsDead();
+        if (characters[msg.sender].xp == 0) revert NotEnoughXP();
+        if (characters[other].status == CharacterStatus.Dead) emit GameEvents.WelcomeBack(other);
+        characters[other] = characters[msg.sender].heal(characters[other]);
+        emit GameEvents.PositiveKarmaAction(msg.sender, other, characters[msg.sender].healingPower);
     }
 }

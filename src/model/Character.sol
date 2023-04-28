@@ -27,9 +27,6 @@ library CharacterImpl {
         pure
         returns (Character memory updatedCharacter)
     {
-        if (_character.status == CharacterStatus.Unborn) revert UnbornCharacter();
-        if (_character.status == CharacterStatus.Dead) revert DeadCharacter();
-        
         _character.hp = _character.hp.flooredSubstract(_damage);
         if (_character.hp == 0) {
             _character.status = CharacterStatus.Dead;
@@ -37,10 +34,11 @@ library CharacterImpl {
         updatedCharacter = _character;
     }
 
-    // function heal(Character calldata healer, Character memory other) public pure returns (Character memory) {
-    //     other.hp += healer.healingPower;
-    //     return other;
-    // }
+    function heal(Character calldata healer, Character memory other) public pure returns (Character memory) {
+        other.hp += healer.healingPower;
+        other.status = CharacterStatus.Alive;
+        return other;
+    }
 }
 
 abstract contract CharacterOps is PseudoRandom {

@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 import "../../src/utils/PseudoRandom.sol";
+import "../../src/utils/Math.sol";
 
 contract NumGenerator is PseudoRandom {
     function r(uint256 _max) public returns (uint256 _n) {
@@ -15,8 +16,6 @@ contract NumGenerator is PseudoRandom {
 }
 
 contract PseudorandomTest is Test {
-    uint256 constant MAX = 2 ** 256 - 1;
-
     NumGenerator public gen;
 
     function setUp() public {
@@ -30,8 +29,8 @@ contract PseudorandomTest is Test {
     }
 
     function test_RandomNumberIsRandom() public {
-        uint256 n1 = gen.r(MAX);
-        uint256 n2 = gen.r(MAX);
+        uint256 n1 = gen.r(Math.MAX_UINT256);
+        uint256 n2 = gen.r(Math.MAX_UINT256);
         assert(n1 != n2);
     }
 

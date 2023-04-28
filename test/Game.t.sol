@@ -50,6 +50,11 @@ contract GameBossTest is GameTest {
 }
 
 contract GameCharacterTest is GameTest {
+    function test_CharactersAreUnbornByDefault(address user) public view {
+        (,,,, CharacterStatus status) = game.characters(user);
+        assert(status == CharacterStatus.Unborn);
+    }
+
     function test_CreateCharacter() public {
         Character memory character = game.createCharacter();
         assertGt(character.hp, 0);
@@ -93,7 +98,7 @@ contract GameFightTest is GameTest {
         game.attack();
         (uint256 hp,,,,) = game.characters(address(this));
         assertEq(hp, 0);
-        vm.expectRevert(CharacterCannotFight.selector);
+        vm.expectRevert(CharacterIsDead.selector);
         game.attack();
     }
 
@@ -202,4 +207,53 @@ contract GameFightTest is GameTest {
         emit GameEvents.AHeroHasFallen(address(this));
         game.attack();
     }
+}
+
+contract GameHealTest is GameTest {
+    function test_RevertIfSelfHealing() public {
+        game.createCharacter();
+        vm.expectRevert(CannotHealSelf.selector);
+        game.heal(address(this));
+    }
+
+    function test_RevertIfCharacterIsUnborn(address other) public {
+        vm.assume(other != address(this));
+        // spawn somebody to heal
+        vm.prank(other);
+        game.createCharacter();
+        // revert as this address has no character
+        vm.expectRevert(UnbornCharacter.selector);
+        game.heal(other);
+    }
+
+    function test_RevertIfCharacterIsDead(address other) public {
+        vm.assume(other != address(this));
+        // spawn somebody to heal
+        vm.prank(other);
+        game.createCharacter();
+        // spawn a boss to kill the character
+        game.createBoss(1000000, 1000000, 0);
+        // kill the character
+        game.createCharacter();
+        game.attack();
+        (uint256 hp,,,,) = game.characters(address(this));
+        assertEq(hp, 0);
+        // revert as this addres' character is dead
+        vm.expectRevert(CharacterIsDead.selector);
+        game.heal(other);
+    }
+
+    function test_RevertIfNotEnoughXp(address other) public {
+        vm.assume(other != address(this));
+        // spawn somebody to heal
+        vm.prank(other);
+        game.createCharacter();
+        // create this address'char
+        game.createCharacter();
+        // revert as this addres' character does not have any xp
+        vm.expectRevert(NotEnoughXP.selector);
+        game.heal(other);
+    }
+
+    // todo test happy path once we have the reward system working
 }

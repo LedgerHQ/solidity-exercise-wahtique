@@ -21,11 +21,31 @@ contract CharacterImplTest is Test {
         assert(damaged.status == CharacterStatus.Alive);
     }
 
-    function test_CharacterTakeDamagesAndCanNotFight(uint256 hp, uint256 damage) public {
+    function test_CharacterTakeDamagesAndDie(uint256 hp, uint256 damage) public {
         vm.assume(hp <= damage);
         bob.hp = hp;
         Character memory damaged = bob.takeDamages(damage);
         assertEq(damaged.hp, 0);
         assert(damaged.status == CharacterStatus.Dead);
+    }
+
+    function test_Heal(uint256 heal, uint256 hp) public {
+        vm.assume(hp > 0);
+        vm.assume(heal > 0);
+        vm.assume(hp < 1000);
+        vm.assume(heal < 1000);
+        bob.healingPower = heal;
+        Character memory other = Character(hp, 0, 0, 0, CharacterStatus.Alive);
+        Character memory healed = bob.heal(other);
+        assertEq(healed.hp, hp + heal);
+    }
+
+    function test_Revive(uint256 heal) public {
+        vm.assume(heal > 0);
+        bob.healingPower = heal;
+        Character memory other = Character(0, 0, 0, 0, CharacterStatus.Dead);
+        Character memory healed = bob.heal(other);
+        assertEq(healed.hp, heal);
+        assert(healed.status == CharacterStatus.Alive);
     }
 }

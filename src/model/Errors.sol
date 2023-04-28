@@ -8,5 +8,5 @@ error UnGentlemanlyBehavior();
 error UnbornCharacter();
 error DeadCharacter();
 error CharacterIsDead();
-error CharacterCannotFight();
 error NotEnoughXP();
+error CannotHealSelf();
