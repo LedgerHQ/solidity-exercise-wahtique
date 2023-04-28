@@ -8,6 +8,10 @@ contract NumGenerator is PseudoRandom {
     function r(uint256 _max) public returns (uint256 _n) {
         _n = super.random(_max);
     }
+
+    function r(uint256 _avg, uint256 _std) public returns (uint256 _n) {
+        _n = super.random(_avg, _std);
+    }
 }
 
 contract PseudorandomTest is Test {
@@ -34,5 +38,20 @@ contract PseudorandomTest is Test {
     function test_RevertIf_MaxIsZero() public {
         vm.expectRevert(ArithmeticError.selector);
         gen.r(0);
+    }
+
+    function test_RevertIf_StdGtAvg() public {
+        vm.expectRevert(ArithmeticError.selector);
+        gen.r(10, 11);
+    }
+
+    function test_RandomNumberWithAvgAndStdDev(uint256 _avg, uint256 _std) public {
+        vm.assume(_std > 0);
+        vm.assume(_avg > _std);
+        // avoid underflow
+        vm.assume(_avg < 100000000);
+        uint256 n = gen.r(_avg, _std);
+        assertLt(n, _avg + _std);
+        assertGt(n, _avg - _std);
     }
 }

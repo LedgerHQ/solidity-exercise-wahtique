@@ -39,17 +39,15 @@ contract GameTest is Test {
     }
 
     function test_CreateCharacter() public {
-        address characterAddress = game.createCharacter();
-        (uint256 hp, uint256 dmg, uint256 xp) = game.characters(characterAddress);
-        assertEq(characterAddress, address(this));
-        assertGt(hp, 0);
-        assertGt(dmg, 0);
-        assertEq(xp, 0);
+        Character memory character = game.createCharacter();
+        assertGt(character.hp, 0);
+        assertGt(character.damage, 0);
+        assertGt(character.healingPower, 0);
+        assertEq(character.xp, 0);
     }
 
     function test_RevertWhen_CallCreateCharacterTwice() public {
-        address newCharAddress = game.createCharacter();
-        assertEq(newCharAddress, address(this));
+        game.createCharacter();
         vm.expectRevert(CharacterAlreadyInGame.selector);
         game.createCharacter();
     }

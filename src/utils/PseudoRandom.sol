@@ -18,4 +18,9 @@ contract PseudoRandom {
         seed++;
         _n = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender, seed))) % _max;
     }
+
+    function random(uint256 _avg, uint256 _std) internal returns (uint256 _n) {
+        if (_std > _avg) revert ArithmeticError();
+        _n = _avg + random(_std) - random(_std);
+    }
 }
