@@ -7,7 +7,7 @@ error ArithmeticError();
 /// @author William Veal Phan
 /// @notice Generate pseudo random numbers
 /// @dev Inherit this contract to use the pseudo random number generator
-contract PseudoRandom {
+abstract contract PseudoRandom {
     uint256 seed = 0;
 
     /// @notice Generate a pseudo random number

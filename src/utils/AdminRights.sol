@@ -8,7 +8,7 @@ error Unauthorized();
 /// @author William Veal Phan
 /// @notice Define modifiers and functions to manage admin rights
 /// @dev Inhirit from this contract and set admin address
-contract AdminRights {
+abstract contract AdminRights {
     /// @notice address with admin permissions
     address public admin;
 

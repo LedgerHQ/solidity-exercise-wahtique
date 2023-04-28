@@ -34,7 +34,7 @@ library CharacterImpl {
     }
 }
 
-contract CharacterOps is PseudoRandom {
+abstract contract CharacterOps is PseudoRandom {
     /// @notice base health of a character
     uint256 public characterBaseHealth = 100;
     /// @notice max health bonus of a character; a new character hp will be in [ base - dev, base + dev ]
