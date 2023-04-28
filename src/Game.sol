@@ -105,15 +105,15 @@ contract Game is AdminRights, CharacterOps {
 
     /// @notice create a custom boss and add it to the game; need admin rights
     /// @dev increment bossId and add a new boss to the bosses mapping
-    /// @param _hp how much they can take
-    /// @param _damage how much they should hit back
-    /// @param _reward how much should be awarded to its murderers
+    /// @param hp how much they can take
+    /// @param damage how much they should hit back
+    /// @param reward how much should be awarded to its murderers
     /// @return bossId like an IKEA shelf number, but for a boss
     /// @custom:emits GameEvents.BossSpawned It's aliiiiiiiiiiive !
-    function createBoss(uint256 _hp, uint256 _damage, uint256 _reward) external onlyAdmin returns (uint256) {
+    function createBoss(uint256 hp, uint256 damage, uint256 reward) external onlyAdmin returns (uint256) {
         if (bosses[bossId].status == BossStatus.Alive) revert BossAlreadyInGame();
         bossId++;
-        boss = Boss(_hp, _damage, _reward, BossStatus.Alive);
+        boss = Boss(hp, damage, reward, BossStatus.Alive);
         bosses[bossId] = boss;
         emit GameEvents.BossSpawned(bossId, boss);
         return bossId;
@@ -157,6 +157,8 @@ contract Game is AdminRights, CharacterOps {
     /// @notice Heal another player for the player healing power.
     ///         Only if you have a character alive AND with some xp.
     /// @param other the one who will owe you a drink next time you go out ( ie. never )
+    /// @custom:emits GameEvents.PositiveKarmaAction +1 for a heal
+    /// @custom:emits GameEvents.WelcomeBack Valhalla can wait
     function heal(address other) external {
         if (other == msg.sender) revert CannotHealSelf();
         if (characters[msg.sender].status == CharacterStatus.Unborn) revert UnbornCharacter();
@@ -165,5 +167,18 @@ contract Game is AdminRights, CharacterOps {
         if (characters[other].status == CharacterStatus.Dead) emit GameEvents.WelcomeBack(other);
         characters[other] = characters[msg.sender].heal(characters[other]);
         emit GameEvents.PositiveKarmaAction(msg.sender, other, characters[msg.sender].healingPower);
+    }
+
+    /// @notice To the victorious goes the spoils
+    /// @dev claim a reward if you are worthy and the boss is dead
+    /// @param id the boss id
+    /// @custom:emits GameEvents.BossRewardClaimed xp gained for the kill
+    function claimReward(uint256 id) external {
+        if (rewards[msg.sender][id] == RewardStatus.Claimed) revert RewardAlreadyClaimed();
+        if (rewards[msg.sender][id] == RewardStatus.Unworthy) revert YouAreUnworthy();
+        if (bosses[id].status != BossStatus.Vainquished) revert BossNotVainquishedYet();
+        characters[msg.sender] = characters[msg.sender].getXP(bosses[bossId].reward);
+        rewards[msg.sender][bossId] = RewardStatus.Claimed;
+        emit GameEvents.BossRewardClaimed(id, msg.sender, bosses[id].reward);
     }
 }

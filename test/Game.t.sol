@@ -257,3 +257,5 @@ contract GameHealTest is GameTest {
 
     // todo test happy path once we have the reward system working
 }
+
+contract GameRewardTest is GameTest {}

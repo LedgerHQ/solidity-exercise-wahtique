@@ -10,3 +10,6 @@ error DeadCharacter();
 error CharacterIsDead();
 error NotEnoughXP();
 error CannotHealSelf();
+error RewardAlreadyClaimed();
+error BossNotVainquishedYet();
+error YouAreUnworthy();

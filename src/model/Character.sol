@@ -22,22 +22,27 @@ struct Character {
 library CharacterImpl {
     using Math for uint256;
 
-    function takeDamages(Character memory _character, uint256 _damage)
+    function takeDamages(Character memory character, uint256 damage)
         public
         pure
         returns (Character memory updatedCharacter)
     {
-        _character.hp = _character.hp.flooredSubstract(_damage);
-        if (_character.hp == 0) {
-            _character.status = CharacterStatus.Dead;
+        character.hp = character.hp.flooredSubstract(damage);
+        if (character.hp == 0) {
+            character.status = CharacterStatus.Dead;
         }
-        updatedCharacter = _character;
+        updatedCharacter = character;
     }
 
     function heal(Character calldata healer, Character memory other) public pure returns (Character memory) {
         other.hp += healer.healingPower;
         other.status = CharacterStatus.Alive;
         return other;
+    }
+
+    function getXP(Character memory character, uint256 reward) public pure returns (Character memory) {
+        character.xp += reward;
+        return character;
     }
 }
 
