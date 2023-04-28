@@ -12,7 +12,9 @@ contract GameTest is Test {
     function setUp() public {
         game = new Game();
     }
+}
 
+contract GameAdminTest is GameTest {
     function test_OwnerIsDeployer() public {
         assertEq(address(game.owner()), address(this));
     }
@@ -20,7 +22,9 @@ contract GameTest is Test {
     function test_OwnerIsAdmin() public {
         assertEq(address(game.admin()), game.owner());
     }
+}
 
+contract GameBossTest is GameTest {
     function test_CreateBoss(uint256 _hp, uint256 _damage, uint256 _reward) public {
         uint256 bossId = game.createBoss(_hp, _damage, _reward);
         assertEq(bossId, 1);
@@ -43,7 +47,9 @@ contract GameTest is Test {
         vm.prank(address(_notOwner));
         game.createBoss(_hp, _damage, _reward);
     }
+}
 
+contract GameCharacterTest is GameTest {
     function test_CreateCharacter() public {
         Character memory character = game.createCharacter();
         assertGt(character.hp, 0);
