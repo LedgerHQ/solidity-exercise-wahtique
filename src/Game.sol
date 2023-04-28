@@ -7,42 +7,7 @@ import "./model/Boss.sol";
 import "./utils/PseudoRandom.sol";
 import "./model/Errors.sol";
 
-/// @title World of Ledger
-/// @author William Veal Phan
-contract Game is AdminRights, CharacterOps {
-    using BossImpl for Boss;
-    using CharacterImpl for Character;
-
-    /// @notice owner of the contract
-    /// @dev owner never changes
-    address public immutable owner;
-
-    uint256 bossId;
-
-    /// @notice current boss in the game
-    Boss public boss;
-
-    /// @notice users with characters in game
-    mapping(address user => bool hasCharacter) public hasCharacterInGame;
-
-    /// @notice characters currently in the game ; only one character is allowed per address
-    mapping(address user => Character character) public characters;
-
-    /// @notice keep track of the status of past, current and future bosses
-    mapping(uint256 bossId => Boss boss) public bosses;
-
-    /// @notice keep track of the rewards a boss can give
-    mapping(uint256 bossId => uint256 reward) public bossRewards;
-
-    enum RewardStatus {
-        Unworthy,
-        Unclaimed,
-        Claimed
-    }
-
-    /// @notice keep track boss fight reward a user can claim
-    mapping(address user => mapping(uint256 bossId => RewardStatus status)) public rewards;
-
+library GameEvents {
     /// @notice A new boss was added to the game. Fight for your life ! For loot and glory !
     /// @dev emit this when spawning a new boss
     /// @param bossId id of the newly minted boss
@@ -85,6 +50,43 @@ contract Game is AdminRights, CharacterOps {
     /// @dev Emit this when a player is slain by the current boss
     /// @param user address of the player who has been slain
     event AHeroHasFallen(address user);
+}
+
+/// @title World of Ledger
+/// @author William Veal Phan
+contract Game is AdminRights, CharacterOps {
+    using BossImpl for Boss;
+    using CharacterImpl for Character;
+
+    /// @notice owner of the contract
+    /// @dev owner never changes
+    address public immutable owner;
+
+    uint256 bossId;
+
+    /// @notice current boss in the game
+    Boss public boss;
+
+    /// @notice users with characters in game
+    mapping(address user => bool hasCharacter) public hasCharacterInGame;
+
+    /// @notice characters currently in the game ; only one character is allowed per address
+    mapping(address user => Character character) public characters;
+
+    /// @notice keep track of the status of past, current and future bosses
+    mapping(uint256 bossId => Boss boss) public bosses;
+
+    /// @notice keep track of the rewards a boss can give
+    mapping(uint256 bossId => uint256 reward) public bossRewards;
+
+    enum RewardStatus {
+        Unworthy,
+        Unclaimed,
+        Claimed
+    }
+
+    /// @notice keep track boss fight reward a user can claim
+    mapping(address user => mapping(uint256 bossId => RewardStatus status)) public rewards;
 
     constructor() {
         // owner is the deployer of this contract
@@ -106,6 +108,7 @@ contract Game is AdminRights, CharacterOps {
         bossId++;
         boss = Boss(_hp, _damage, _reward, BossStatus.Alive);
         bosses[bossId] = boss;
+        emit GameEvents.BossSpawned(bossId, boss);
         return bossId;
     }
 
@@ -115,7 +118,7 @@ contract Game is AdminRights, CharacterOps {
         if (hasCharacterInGame[msg.sender]) revert CharacterAlreadyInGame();
         characters[msg.sender] = genCharacter();
         hasCharacterInGame[msg.sender] = true;
-        emit CharacterCreated(msg.sender, characters[msg.sender]);
+        emit GameEvents.CharacterCreated(msg.sender, characters[msg.sender]);
         return characters[msg.sender];
     }
 
@@ -134,17 +137,17 @@ contract Game is AdminRights, CharacterOps {
             // the user attack the boss first because fantasy has taught us
             // a boss just wait for a player and dnever take the initiative
             boss = boss.takeDamages(characters[msg.sender].damage);
-            emit HeroicFeat(msg.sender, bossId, characters[msg.sender].damage);
+            emit GameEvents.HeroicFeat(msg.sender, bossId, characters[msg.sender].damage);
             // the boss counter-attack, dead or alive
             characters[msg.sender] = characters[msg.sender].takeDamages(boss.damage);
-            emit Aaaaaaargh(bossId, msg.sender, boss.damage);
+            emit GameEvents.Aaaaaaargh(bossId, msg.sender, boss.damage);
             // resolve post-attack state
             // when attackinga heror bcomees worthy
             rewards[msg.sender][bossId] = RewardStatus.Unclaimed;
             // a heor's death should be honored
-            if (characters[msg.sender].isDead()) emit AHeroHasFallen(msg.sender);
+            if (characters[msg.sender].isDead()) emit GameEvents.AHeroHasFallen(msg.sender);
             // a boss' death should be celebrated and their rewards become claimable
-            if (boss.isDead()) emit BossVainquished(bossId);
+            if (boss.isDead()) emit GameEvents.BossVainquished(bossId);
         }
     }
 }

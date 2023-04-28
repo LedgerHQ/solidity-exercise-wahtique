@@ -26,6 +26,12 @@ contract GameTest is Test {
         assertEq(bossId, 1);
     }
 
+    function test_CreateBoss_EmitBossSpawned(uint256 _hp, uint256 _damage, uint256 _reward) public {
+        vm.expectEmit();
+        emit GameEvents.BossSpawned(1, Boss(_hp, _damage, _reward, BossStatus.Alive));
+        game.createBoss(_hp, _damage, _reward);
+    }
+
     function test_RevertWhen_CallAddBossWithoutAdminRights(
         address _notOwner,
         uint256 _hp,
@@ -44,6 +50,12 @@ contract GameTest is Test {
         assertGt(character.damage, 0);
         assertGt(character.healingPower, 0);
         assertEq(character.xp, 0);
+    }
+
+    function test_CreateCharacter_EmitCharacterCreated() public {
+        vm.expectEmit(true, false, false, false);
+        emit GameEvents.CharacterCreated(address(this), Character(100, 10, 10, 0));
+        game.createCharacter();
     }
 
     function test_RevertWhen_CallCreateCharacterTwice() public {
