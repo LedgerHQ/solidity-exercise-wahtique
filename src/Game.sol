@@ -103,6 +103,18 @@ contract Game is AdminRights, CharacterOps {
         bossId = 0;
     }
 
+    modifier requireCharacterStatus(CharacterStatus expected) {
+        CharacterStatus actual = characters[msg.sender].status;
+        if (actual != expected) revert WrongCharacterStatus(expected, actual);
+        _;
+    }
+
+    modifier requireBossStatus(BossStatus expected) {
+        BossStatus actual = boss.status;
+        if (actual != expected) revert WrongBossStatus(expected, actual);
+        _;
+    }
+
     /// @notice create a custom boss and add it to the game; need admin rights
     /// @dev increment bossId and add a new boss to the bosses mapping
     /// @param hp how much they can take
@@ -110,8 +122,12 @@ contract Game is AdminRights, CharacterOps {
     /// @param reward how much should be awarded to its murderers
     /// @return bossId like an IKEA shelf number, but for a boss
     /// @custom:emits GameEvents.BossSpawned It's aliiiiiiiiiiive !
-    function createBoss(uint256 hp, uint256 damage, uint256 reward) external onlyAdmin returns (uint256) {
-        if (bosses[bossId].status == BossStatus.Alive) revert BossAlreadyInGame();
+    function createBoss(uint256 hp, uint256 damage, uint256 reward)
+        external
+        onlyAdmin
+        requireBossStatus(BossStatus.Unborn)
+        returns (uint256)
+    {
         bossId++;
         boss = Boss(hp, damage, reward, BossStatus.Alive);
         bosses[bossId] = boss;
@@ -122,8 +138,7 @@ contract Game is AdminRights, CharacterOps {
     /// @notice Create a new semi random character. Only one character per address
     /// @return character a peasant with a pitch-fork
     /// @custom:emits GameEvents.CharacterCreated Welcome to the world of Ledger !
-    function createCharacter() external returns (Character memory) {
-        if (characters[msg.sender].status != CharacterStatus.Unborn) revert CharacterAlreadyInGame();
+    function createCharacter() external requireCharacterStatus(CharacterStatus.Unborn) returns (Character memory) {
         characters[msg.sender] = genCharacter();
         emit GameEvents.CharacterCreated(msg.sender, characters[msg.sender]);
         return characters[msg.sender];
@@ -134,10 +149,7 @@ contract Game is AdminRights, CharacterOps {
     /// @custom:emits GameEvents.Aaaaaaargh self explanatory if you've ever been eviscerated
     /// @custom:emits GameEvents.AHeroHasFallen a moment of silence for the fallen
     /// @custom:emits GameEvents.BossVainquished VICTORY
-    function attack() external {
-        if (characters[msg.sender].status == CharacterStatus.Unborn) revert UnbornCharacter();
-        if (characters[msg.sender].status == CharacterStatus.Dead) revert CharacterIsDead();
-        if (bosses[bossId].status != BossStatus.Alive) revert NoBossInGame();
+    function attack() external requireCharacterStatus(CharacterStatus.Alive) requireBossStatus(BossStatus.Alive) {
         // the user attack the boss first because fantasy has taught us
         // a boss just wait for a player and dnever take the initiative
         boss = boss.takeDamages(characters[msg.sender].damage);
@@ -159,10 +171,8 @@ contract Game is AdminRights, CharacterOps {
     /// @param other the one who will owe you a drink next time you go out ( ie. never )
     /// @custom:emits GameEvents.PositiveKarmaAction +1 for a heal
     /// @custom:emits GameEvents.WelcomeBack Valhalla can wait
-    function heal(address other) external {
+    function heal(address other) external requireCharacterStatus(CharacterStatus.Alive) {
         if (other == msg.sender) revert CannotHealSelf();
-        if (characters[msg.sender].status == CharacterStatus.Unborn) revert UnbornCharacter();
-        if (characters[msg.sender].status == CharacterStatus.Dead) revert CharacterIsDead();
         if (characters[msg.sender].xp == 0) revert NotEnoughXP();
         if (characters[other].status == CharacterStatus.Dead) emit GameEvents.WelcomeBack(other);
         characters[other] = characters[msg.sender].heal(characters[other]);
@@ -173,10 +183,13 @@ contract Game is AdminRights, CharacterOps {
     /// @dev claim a reward if you are worthy and the boss is dead
     /// @param id the boss id
     /// @custom:emits GameEvents.BossRewardClaimed xp gained for the kill
-    function claimReward(uint256 id) external {
+    function claimReward(uint256 id)
+        external
+        requireCharacterStatus(CharacterStatus.Alive)
+        requireBossStatus(BossStatus.Vainquished)
+    {
         if (rewards[msg.sender][id] == RewardStatus.Claimed) revert RewardAlreadyClaimed();
         if (rewards[msg.sender][id] == RewardStatus.Unworthy) revert YouAreUnworthy();
-        if (bosses[id].status != BossStatus.Vainquished) revert BossNotVainquishedYet();
         characters[msg.sender] = characters[msg.sender].getXP(bosses[bossId].reward);
         rewards[msg.sender][bossId] = RewardStatus.Claimed;
         emit GameEvents.BossRewardClaimed(id, msg.sender, bosses[id].reward);

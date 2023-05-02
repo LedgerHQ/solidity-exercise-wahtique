@@ -9,6 +9,8 @@ enum BossStatus {
     Vainquished
 }
 
+error WrongBossStatus(BossStatus expected, BossStatus actual);
+
 struct Boss {
     uint256 hp;
     uint256 damage;

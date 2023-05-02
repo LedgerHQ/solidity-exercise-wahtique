@@ -71,20 +71,24 @@ contract GameCharacterTest is GameTest {
 
     function test_RevertWhen_CallCreateCharacterTwice() public {
         game.createCharacter();
-        vm.expectRevert(CharacterAlreadyInGame.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(WrongCharacterStatus.selector, CharacterStatus.Unborn, CharacterStatus.Alive)
+        );
         game.createCharacter();
     }
 }
 
 contract GameFightTest is GameTest {
     function test_RevertIfCharacterIsUnborn() public {
-        vm.expectRevert(UnbornCharacter.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(WrongCharacterStatus.selector, CharacterStatus.Alive, CharacterStatus.Unborn)
+        );
         game.attack();
     }
 
     function test_reverIfNoBossInGame() public {
         game.createCharacter();
-        vm.expectRevert(NoBossInGame.selector);
+        vm.expectRevert(abi.encodeWithSelector(WrongBossStatus.selector, BossStatus.Alive, BossStatus.Unborn));
         game.attack();
     }
 
@@ -98,7 +102,9 @@ contract GameFightTest is GameTest {
         game.attack();
         (uint256 hp,,,,) = game.characters(address(this));
         assertEq(hp, 0);
-        vm.expectRevert(CharacterIsDead.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(WrongCharacterStatus.selector, CharacterStatus.Alive, CharacterStatus.Dead)
+        );
         game.attack();
     }
 
@@ -222,7 +228,9 @@ contract GameHealTest is GameTest {
         vm.prank(other);
         game.createCharacter();
         // revert as this address has no character
-        vm.expectRevert(UnbornCharacter.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(WrongCharacterStatus.selector, CharacterStatus.Alive, CharacterStatus.Unborn)
+        );
         game.heal(other);
     }
 
@@ -239,7 +247,9 @@ contract GameHealTest is GameTest {
         (uint256 hp,,,,) = game.characters(address(this));
         assertEq(hp, 0);
         // revert as this addres' character is dead
-        vm.expectRevert(CharacterIsDead.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(WrongCharacterStatus.selector, CharacterStatus.Alive, CharacterStatus.Dead)
+        );
         game.heal(other);
     }
 

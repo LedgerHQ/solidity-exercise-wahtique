@@ -11,6 +11,8 @@ enum CharacterStatus {
     Dead
 }
 
+error WrongCharacterStatus(CharacterStatus expected, CharacterStatus actual);
+
 struct Character {
     uint256 hp;
     uint256 damage;
