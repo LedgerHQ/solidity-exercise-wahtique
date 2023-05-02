@@ -27,6 +27,7 @@ struct Character {
 library CharacterImpl {
     using Math for uint256;
 
+    // todo replace this with `attack` instead to make it conssitent with the rest
     function takeDamages(Character memory character, uint256 damage)
         public
         pure

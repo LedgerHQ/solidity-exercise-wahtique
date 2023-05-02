@@ -68,6 +68,13 @@ library GameEvents {
     /// @param user address of the player who has leveled up
     /// @param level new level of the player
     event LevelUp(address user, uint256 level);
+
+    /// @notice A character has launched a fireball at the boss
+    /// @dev Emit this when a player use the fireball skill
+    /// @param user address of the player who has used the skill
+    /// @param bossId id of the current boss
+    /// @param damage amount of damage dealt to the boss
+    event Explosion(address user, uint256 bossId, uint256 damage);
 }
 
 /// @title World of Ledger
@@ -90,6 +97,9 @@ contract Game is AdminRights, CharacterOps {
 
     /// @notice keep track of the status of past, current and future bosses
     mapping(uint256 bossId => Boss boss) public bosses;
+
+    /// @notice keep track of the next time a char can use a skill
+    mapping(address character => mapping(string skill => uint256 refreshDate)) public cooldowns;
 
     enum RewardStatus {
         Unworthy,
@@ -124,6 +134,12 @@ contract Game is AdminRights, CharacterOps {
     modifier requireLevel(uint256 level) {
         uint256 actual = characters[msg.sender].level;
         if (actual < level) revert LevelTooLow(level, actual);
+        _;
+    }
+
+    modifier outOfCooldown(string memory skill) {
+        uint256 nextUse = cooldowns[msg.sender][skill];
+        if (nextUse > block.timestamp) revert SkillOnCooldown(skill, nextUse);
         _;
     }
 
@@ -209,5 +225,18 @@ contract Game is AdminRights, CharacterOps {
             characters[msg.sender] = characters[msg.sender].levelUp();
             emit GameEvents.LevelUp(msg.sender, characters[msg.sender].level);
         }
+    }
+
+    /// @notice EXPLOOOOOOSION !
+    /// @custom:emits GameEvents.Explosion BOOM
+    function launchFireball()
+        external
+        requireCharacterStatus(CharacterStatus.Alive)
+        requireLevel(3)
+        outOfCooldown("fireball")
+    {
+        uint256 fireballDmg = characters[msg.sender].damage * characters[msg.sender].level;
+        cooldowns[msg.sender]["fireball"] = block.timestamp + 1 days;
+        emit GameEvents.Explosion(msg.sender, bossId, fireballDmg);
     }
 }

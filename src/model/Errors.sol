@@ -5,3 +5,5 @@ error NotEnoughXP();
 error CannotHealSelf();
 error RewardAlreadyClaimed();
 error YouAreUnworthy();
+
+error SkillOnCooldown(string skill, uint256 cooldownEnd);
