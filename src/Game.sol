@@ -62,6 +62,12 @@ library GameEvents {
     /// @dev Emit this when a playe is revived
     /// @param user address of the player who has been revived
     event WelcomeBack(address user);
+
+    /// @notice A character has leveled up
+    /// @dev Emit this when a player level up
+    /// @param user address of the player who has leveled up
+    /// @param level new level of the player
+    event LevelUp(address user, uint256 level);
 }
 
 /// @title World of Ledger
@@ -112,6 +118,12 @@ contract Game is AdminRights, CharacterOps {
     modifier requireBossStatus(BossStatus expected) {
         BossStatus actual = boss.status;
         if (actual != expected) revert WrongBossStatus(expected, actual);
+        _;
+    }
+
+    modifier requireLevel(uint256 level) {
+        uint256 actual = characters[msg.sender].level;
+        if (actual < level) revert LevelTooLow(level, actual);
         _;
     }
 
@@ -171,9 +183,8 @@ contract Game is AdminRights, CharacterOps {
     /// @param other the one who will owe you a drink next time you go out ( ie. never )
     /// @custom:emits GameEvents.PositiveKarmaAction +1 for a heal
     /// @custom:emits GameEvents.WelcomeBack Valhalla can wait
-    function heal(address other) external requireCharacterStatus(CharacterStatus.Alive) {
+    function heal(address other) external requireCharacterStatus(CharacterStatus.Alive) requireLevel(2) {
         if (other == msg.sender) revert CannotHealSelf();
-        if (characters[msg.sender].xp == 0) revert NotEnoughXP();
         if (characters[other].status == CharacterStatus.Dead) emit GameEvents.WelcomeBack(other);
         characters[other] = characters[msg.sender].heal(characters[other]);
         emit GameEvents.PositiveKarmaAction(msg.sender, other, characters[msg.sender].healingPower);
@@ -183,6 +194,7 @@ contract Game is AdminRights, CharacterOps {
     /// @dev claim a reward if you are worthy and the boss is dead
     /// @param id the boss id
     /// @custom:emits GameEvents.BossRewardClaimed xp gained for the kill
+    /// @custom:emits GameEvents.LevelUp Congratulations ! You can now start from zero again !
     function claimReward(uint256 id)
         external
         requireCharacterStatus(CharacterStatus.Alive)
@@ -193,5 +205,9 @@ contract Game is AdminRights, CharacterOps {
         characters[msg.sender] = characters[msg.sender].getXP(bosses[bossId].reward);
         rewards[msg.sender][bossId] = RewardStatus.Claimed;
         emit GameEvents.BossRewardClaimed(id, msg.sender, bosses[id].reward);
+        if (characters[msg.sender].xp >= (characters[msg.sender].level + 1) * xpBase) {
+            characters[msg.sender] = characters[msg.sender].levelUp();
+            emit GameEvents.LevelUp(msg.sender, characters[msg.sender].level);
+        }
     }
 }

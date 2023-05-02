@@ -51,7 +51,7 @@ contract GameBossTest is GameTest {
 
 contract GameCharacterTest is GameTest {
     function test_CharactersAreUnbornByDefault(address user) public view {
-        (,,,, CharacterStatus status) = game.characters(user);
+        (,,,,, CharacterStatus status) = game.characters(user);
         assert(status == CharacterStatus.Unborn);
     }
 
@@ -61,11 +61,12 @@ contract GameCharacterTest is GameTest {
         assertGt(character.damage, 0);
         assertGt(character.healingPower, 0);
         assertEq(character.xp, 0);
+        assertEq(character.level, 1);
     }
 
     function test_CreateCharacter_EmitCharacterCreated() public {
         vm.expectEmit(true, false, false, false);
-        emit GameEvents.CharacterCreated(address(this), Character(100, 10, 10, 0, CharacterStatus.Alive));
+        emit GameEvents.CharacterCreated(address(this), Character(100, 10, 10, 0, 1, CharacterStatus.Alive));
         game.createCharacter();
     }
 
@@ -100,7 +101,7 @@ contract GameFightTest is GameTest {
         assertGt(bob.hp, 0);
         // bob attack Faker and get killed
         game.attack();
-        (uint256 hp,,,,) = game.characters(address(this));
+        (uint256 hp,,,,,) = game.characters(address(this));
         assertEq(hp, 0);
         vm.expectRevert(
             abi.encodeWithSelector(WrongCharacterStatus.selector, CharacterStatus.Alive, CharacterStatus.Dead)
@@ -146,7 +147,7 @@ contract GameFightTest is GameTest {
         assertGt(expected, 0);
         // bob attack and the boss take damages
         game.attack();
-        (uint256 hp,,,,) = game.characters(address(this));
+        (uint256 hp,,,,,) = game.characters(address(this));
         assertEq(hp, expected);
     }
 
@@ -197,7 +198,7 @@ contract GameFightTest is GameTest {
         game.createCharacter();
         // bob attack and dies like a noob
         game.attack();
-        (uint256 hp,,,,) = game.characters(address(this));
+        (uint256 hp,,,,,) = game.characters(address(this));
         assertEq(hp, 0);
     }
 
@@ -244,7 +245,7 @@ contract GameHealTest is GameTest {
         // kill the character
         game.createCharacter();
         game.attack();
-        (uint256 hp,,,,) = game.characters(address(this));
+        (uint256 hp,,,,,) = game.characters(address(this));
         assertEq(hp, 0);
         // revert as this addres' character is dead
         vm.expectRevert(
@@ -253,19 +254,21 @@ contract GameHealTest is GameTest {
         game.heal(other);
     }
 
-    function test_RevertIfNotEnoughXp(address other) public {
+    function test_RevertIfLevelTooLow(address other) public {
         vm.assume(other != address(this));
         // spawn somebody to heal
         vm.prank(other);
         game.createCharacter();
         // create this address'char
         game.createCharacter();
-        // revert as this addres' character does not have any xp
-        vm.expectRevert(NotEnoughXP.selector);
+        // revert as this addres' character is level 1
+        vm.expectRevert(abi.encodeWithSelector(LevelTooLow.selector, 2, 1));
         game.heal(other);
     }
 
     // todo test happy path once we have the reward system working
 }
 
-contract GameRewardTest is GameTest {}
+contract GameRewardTest is GameTest {
+    // todo write tests for this
+}
