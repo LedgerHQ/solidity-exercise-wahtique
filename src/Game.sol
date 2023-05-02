@@ -143,25 +143,7 @@ contract Game is AdminRights, CharacterOps {
         _;
     }
 
-    /// @notice create a custom boss and add it to the game; need admin rights
-    /// @dev increment bossId and add a new boss to the bosses mapping
-    /// @param hp how much they can take
-    /// @param damage how much they should hit back
-    /// @param reward how much should be awarded to its murderers
-    /// @return bossId like an IKEA shelf number, but for a boss
-    /// @custom:emits GameEvents.BossSpawned It's aliiiiiiiiiiive !
-    function createBoss(uint256 hp, uint256 damage, uint256 reward)
-        external
-        onlyAdmin
-        requireBossStatus(BossStatus.Unborn)
-        returns (uint256)
-    {
-        bossId++;
-        boss = Boss(hp, damage, reward, BossStatus.Alive);
-        bosses[bossId] = boss;
-        emit GameEvents.BossSpawned(bossId, boss);
-        return bossId;
-    }
+    // PLAYER FUNCTIONS
 
     /// @notice Create a new semi random character. Only one character per address
     /// @return character a peasant with a pitch-fork
@@ -238,5 +220,32 @@ contract Game is AdminRights, CharacterOps {
         uint256 fireballDmg = characters[msg.sender].damage * characters[msg.sender].level;
         cooldowns[msg.sender]["fireball"] = block.timestamp + 1 days;
         emit GameEvents.Explosion(msg.sender, bossId, fireballDmg);
+    }
+
+    // ADMIN STUFF
+
+    /// @notice create a custom boss and add it to the game; need admin rights
+    /// @dev increment bossId and add a new boss to the bosses mapping
+    /// @param hp how much they can take
+    /// @param damage how much they should hit back
+    /// @param reward how much should be awarded to its murderers
+    /// @return bossId like an IKEA shelf number, but for a boss
+    /// @custom:emits GameEvents.BossSpawned It's aliiiiiiiiiiive !
+    function createBoss(uint256 hp, uint256 damage, uint256 reward)
+        external
+        onlyAdmin
+        requireBossStatus(BossStatus.Unborn)
+        returns (uint256)
+    {
+        bossId++;
+        boss = Boss(hp, damage, reward, BossStatus.Alive);
+        bosses[bossId] = boss;
+        emit GameEvents.BossSpawned(bossId, boss);
+        return bossId;
+    }
+
+    function cheat_LevelUp(address luckyGuy) external onlyAdmin {
+        characters[luckyGuy] = characters[luckyGuy].levelUp();
+        emit GameEvents.LevelUp(luckyGuy, characters[luckyGuy].level);
     }
 }

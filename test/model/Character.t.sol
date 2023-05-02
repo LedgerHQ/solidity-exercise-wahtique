@@ -10,7 +10,7 @@ contract CharacterImplTest is Test {
     Character bob;
 
     function setUp() public {
-        bob = Character(100, 10, 10, 0, CharacterStatus.Alive);
+        bob = Character(100, 10, 10, 0, 1, CharacterStatus.Alive);
     }
 
     function test_CharacterTakeDamagesAndCanStillFight(uint256 hp, uint256 damage) public {
@@ -35,7 +35,7 @@ contract CharacterImplTest is Test {
         vm.assume(hp < 1000);
         vm.assume(heal < 1000);
         bob.healingPower = heal;
-        Character memory other = Character(hp, 0, 0, 0, CharacterStatus.Alive);
+        Character memory other = Character(hp, 0, 0, 0, 1, CharacterStatus.Alive);
         Character memory healed = bob.heal(other);
         assertEq(healed.hp, hp + heal);
     }
@@ -43,7 +43,7 @@ contract CharacterImplTest is Test {
     function test_Revive(uint256 heal) public {
         vm.assume(heal > 0);
         bob.healingPower = heal;
-        Character memory other = Character(0, 0, 0, 0, CharacterStatus.Dead);
+        Character memory other = Character(0, 0, 0, 0, 1, CharacterStatus.Dead);
         Character memory healed = bob.heal(other);
         assertEq(healed.hp, heal);
         assert(healed.status == CharacterStatus.Alive);

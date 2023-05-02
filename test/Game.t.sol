@@ -219,6 +219,11 @@ contract GameFightTest is GameTest {
 contract GameHealTest is GameTest {
     function test_RevertIfSelfHealing() public {
         game.createCharacter();
+        // need to be level 2 to heal
+        game.cheat_LevelUp(address(this));
+        (,,,, uint256 level, CharacterStatus status) = game.characters(address(this));
+        assertEq(level, 2);
+        assert(status == CharacterStatus.Alive);
         vm.expectRevert(CannotHealSelf.selector);
         game.heal(address(this));
     }
@@ -270,5 +275,5 @@ contract GameHealTest is GameTest {
 }
 
 contract GameRewardTest is GameTest {
-    // todo write tests for this
+// todo write tests for this
 }
