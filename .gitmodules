@@ -1,0 +1,3 @@
+[submodule "king-of-the-hill/lib/forge-std"]
+	path = king-of-the-hill/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
